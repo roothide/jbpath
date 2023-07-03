@@ -17,6 +17,7 @@ libjbpath_LDFLAGS += -install_name @loader_path/.jbroot/usr/lib/libjbpath.dylib
 libjbpath_INSTALL_PATH = /var/jb/usr/lib
 
 libjbpathapis_FILES = jbpath-shim/jbpath-shim/jbpath_shim.c jbpath-shim/jbpath-shim/jbpath_shim.cpp
+libjbpathapis_CFLAGS += -I./
 libjbpathapis_LDFLAGS += -install_name @loader_path/.jbroot/usr/lib/libjbpathapis.dylib -L$(THEOS_OBJ_DIR) -ljbpath
 libjbpathapis_INSTALL_PATH = /var/jb/usr/lib
 
@@ -26,6 +27,7 @@ include $(THEOS_MAKE_PATH)/library.mk
 TOOL_NAME = updatelink
 
 updatelink_FILES = jbpath-updatelink/updatelink/main.c
+updatelink_CFLAGS += -I./
 updatelink_LDFLAGS += -L$(THEOS_OBJ_DIR) -ljbpath
 updatelink_INSTALL_PATH = /var/jb/usr/sbin
 
