@@ -1,0 +1,8 @@
+
+.DS_Store
+.theos
+packages
+*.xcodeproj/
+jbpath-test/
+jbpathapis-redirect
+Makefile.procursus
