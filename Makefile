@@ -35,4 +35,5 @@ include $(THEOS_MAKE_PATH)/tool.mk
 after-libjbpathapis-all::
 	./jbpathapis-redirect $(THEOS_OBJ_DIR)/libjbpathapis.dylib
 	ldid -S $(THEOS_OBJ_DIR)/libjbpathapis.dylib
+	clang -E jbpath-shim/jbpath-shim/jbpath_shim.h > jbpath-shim/jbpath-shim/libjbpath_shim.h
 

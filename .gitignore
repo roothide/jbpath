@@ -6,3 +6,4 @@ packages
 jbpath-test/
 jbpathapis-redirect
 Makefile.procursus
+jbpath-shim/jbpath-shim/libjbpath_shim.h
