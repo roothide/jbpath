@@ -202,6 +202,10 @@ int processTarget(void* slice)
         fprintf(stderr, "mach-o has no MH_TWOLEVEL\n", magic);
         return -1;
     }
+    if((header->flags & MH_FORCE_FLAT) != 0) {
+        fprintf(stderr, "mach-o has MH_FORCE_FLAT\n");
+        return -1;
+    }
     
     int libOrdinal=1;
     int shimOrdinal=0;
