@@ -8,19 +8,3 @@ std::string jbpath(std::string path)
     free((void*)_p);
     return newpath;
 }
-
-std::string jbroot(std::string path)
-{
-    const char* _p = jbroot_alloc(path.c_str());
-    std::string newpath(_p);
-    free((void*)_p);
-    return newpath;
-}
-
-std::string jbroot_revert(std::string path)
-{
-    const char* _p = jbroot_revert(path.c_str());
-    std::string newpath(_p);
-    free((void*)_p);
-    return newpath;
-}

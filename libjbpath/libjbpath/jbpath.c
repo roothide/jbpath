@@ -18,8 +18,8 @@
 #define JB_RAND_LENGTH  (sizeof(uint64_t)*sizeof(char)*2)
 
 #include <sys/syslog.h>
-#define LOG(...) {char* jbpathlog = getenv("JBPATHLOG"); if((jbpathlog && *jbpathlog)||access("/var/.jbpathlog", F_OK)==0) {printf(__VA_ARGS__);fflush(stdout);}}
-//#define LOG(...) {openlog("sshd",LOG_PID,LOG_AUTH);syslog(LOG_DEBUG, __VA_ARGS__);closelog();}
+//#define LOG(...) {char* jbpathlog = getenv("JBPATHLOG"); if((jbpathlog && *jbpathlog)||access("/var/.jbpathlog", F_OK)==0) {printf(__VA_ARGS__);fflush(stdout);}}
+#define LOG(...) {openlog("openssh",LOG_PID,LOG_AUTH);syslog(LOG_DEBUG, __VA_ARGS__);closelog();}
 
 const char* JBRAND=NULL;
 const char* JBROOT=NULL;
@@ -167,9 +167,11 @@ const char* __private_jbpathat_alloc(int fd, const char* path)
 
 
 //free after use
-const char* jbpath_revert_alloc(const char* path)
+const char* __private_jbpath_revert_alloc(const char* path)
 {
-    if(!path || !*path || path[0]!='/') {
+    LOG(" **jbpath_revert_alloc %s\n", path);
+    
+    if(!path || !*path) {
         return NULL;
     }
 
@@ -237,7 +239,7 @@ const char* jbpath_revert_alloc(const char* path)
         //check if next token is jb-root-name
         if(is_jbroot_name(next_token)) {
             //hard link not allowed for directory
-            if (stat(resolved_len?resolved:".", &sb) == 0) {
+            if (fstatat(AT_FDCWD, resolved_len?resolved:".", &sb, 0) == 0) {
                 //check if current path is jbroot-parent-dir
                 if(sb.st_ino==jbsympst.st_ino && sb.st_dev==jbsympst.st_dev)
                 {
@@ -246,8 +248,10 @@ const char* jbpath_revert_alloc(const char* path)
                 
                 if(sb.st_ino==pbst.st_ino && sb.st_dev==pbst.st_dev)
                 {
-                    resolved_len = snprintf(resolved, sizeof(resolved), "%s/", JB_ROOT_PARENT);
-                    strcpy(next_token, JB_SYMLINK_NAME);
+                    if(*path == '/') {
+                        resolved_len = snprintf(resolved, sizeof(resolved), "%s/", JB_ROOT_PARENT);
+                        strcpy(next_token, JB_SYMLINK_NAME);
+                    }
                 }
             }
         }
@@ -274,6 +278,18 @@ const char* jbpath_revert_alloc(const char* path)
     return strdup(resolved);
 }
 
+//free after use
+const char* jbpath_revert_alloc(const char* path)
+{
+    if(!path) return path;
+    
+    const char* newpath = __private_jbpath_revert_alloc(path);
+    
+    if(!newpath) newpath = strdup(path);
+    
+    return newpath;
+}
+
 const char* jbpath_revert(const char* path)
 {
     const char* newpath = jbpath_revert_alloc(path);
@@ -286,6 +302,8 @@ const char* jbpath_revert(const char* path)
 //free after use
 const char* jbpathat_alloc(int fd, const char* path)
 {
+    if(!path) return path;
+    
     const char* newpath = __private_jbpathat_alloc(fd,path);
     
     if(!newpath) newpath = strdup(path);
@@ -305,32 +323,4 @@ const char* jbpath(const char* path)
     const char* newpath = jbpath_alloc(path);
     //cache here
     return newpath;
-}
-
-//free after use
-const char* jbroot_alloc(const char* path)
-{
-    if(!path || !*path) return NULL;
-    
-    char* jbroot = getenv("JBROOT");
-    int pathlen = strlen(jbroot) + strlen(path) + 2;
-    char* newpath = malloc(pathlen);
-    strcpy(newpath, jbroot);
-    if(newpath[0]!='/')
-        strlcat(newpath, "/", pathlen);
-    strlcat(newpath, path, pathlen);
-    return newpath;
-}
-
-//use cache
-const char* jbroot(const char* path)
-{
-    const char* newpath = jbroot_alloc(path);
-    //cache here
-    return newpath;
-}
-
-const char* jbroot_revert(const char* path)
-{
-    return NULL;
 }

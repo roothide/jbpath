@@ -29,6 +29,9 @@ MACRO_define JBPATH_SHIM_H
 
 #endif /*JBPATH_SHIM_INTERNAL*/
 
+#include <TargetConditionals.h>
+
+//what about tweaks? JBPATH_SHIM_DEF(void*, dlsym, (void * __handle, const char * __symbol))
 
 JBPATH_SHIM_WRAP(void*, dlopen, (const char * __path, int __mode), (newpath,__mode), __path)
 
@@ -44,6 +47,7 @@ JBPATH_SHIM_DEF(int, open, (const char * path, int flags, ...))
 JBPATHAT_SHIM_DEF(int, openat, (int fd, const char * path, int flags, ...))
 
 JBPATH_SHIM_WRAP(int, creat, (const char * path, int mode), (newpath,mode), path)
+JBPATHAT_SHIM_DEF(int, fcntl, (int, int, ...))
 /* apple private */
 JBPATH_SHIM_WRAP(int, openx_np, (const char *path, int flags, filesec_t fsec), (newpath, flags, fsec), path)
 //int open_dprotected_np(const char *, int, int, int, ...);
@@ -181,8 +185,10 @@ JBPATH_SHIM_WRAP(int, statx_np, (const char *path, struct stat *st, filesec_t fs
 
 /* stdlib.h */
 //int system(const char *) __DARWIN_ALIAS_C(system); //shim in sh instead of here *******************************
-JBPATH_SHIM_WRAP(char*, realpath, (const char * path, char *resolved_path), (newpath,resolved_path), path)
-JBPATH_SHIM_WRAP(char*, realpath$DARWIN_EXTSN, (const char * path, char *resolved_path), (newpath,resolved_path), path)
+JBPATH_SHIM_DEF(char*, realpath, (const char * path, char *resolved_path))
+JBPATH_SHIM_DEF(char*, realpath$DARWIN_EXTSN, (const char * path, char *resolved_path))
+//JBPATH_SHIM_WRAP(char*, realpath, (const char * path, char *resolved_path), (newpath,resolved_path), path)
+//JBPATH_SHIM_WRAP(char*, realpath$DARWIN_EXTSN, (const char * path, char *resolved_path), (newpath,resolved_path), path)
 //already defined in unistd.h char* mktemp(char *path)
 //already defined in unistd.h int mkstemp(char *path)
 

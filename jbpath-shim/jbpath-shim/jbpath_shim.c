@@ -7,6 +7,7 @@
 #include <utime.h>
 #include <time.h>
 #include <errno.h>
+#include <assert.h>
 #include <dirent.h>
 #include <copyfile.h>
 #include <sys/mman.h>
@@ -21,6 +22,7 @@
 
 
 #include "jbpath.h"
+
 
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -45,7 +47,7 @@
 if(0)printf("*jbpath_shim_%s\n", #NAME);\
     char* newpath = (char*)jbpath_alloc(PATHARG);\
     RET ret = NAME ARGS;\
-    free((void*)newpath);\
+    if(newpath) free((void*)newpath);\
     return ret;\
 }
 
@@ -53,7 +55,7 @@ if(0)printf("*jbpath_shim_%s\n", #NAME);\
 if(0)printf("*jbpathat_shim_%s\n", #NAME);\
     char* newpath = (char*)jbpathat_alloc(FD,PATHARG,ATFLAG);\
     RET ret = NAME ARGS;\
-    free((void*)newpath);\
+    if(newpath) free((void*)newpath);\
     return ret;\
 }
 
@@ -62,6 +64,13 @@ char* realpath(const char * path, char *resolved_path);
 char* realpath$DARWIN_EXTSN(const char * path, char *resolved_path);
 FILE* fopen(const char * __restrict __filename, const char * __restrict __mode);
 FILE* fopen$DARWIN_EXTSN(const char * __restrict __filename, const char * __restrict __mode);
+
+int open$NOCANCEL(const char * path, int flags, ...);
+int openat$NOCANCEL(int fd, const char * path, int flags, ...);
+int creat$NOCANCEL(const char * path, int mode);
+int fcntl$NOCANCEL(int, int, ...);
+int system$NOCANCEL(const char *);
+
 //c++
 void* _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4openEPKcj(void* thiz, const char* __s, unsigned int mode);
 void* _ZNSt3__114basic_ifstreamIcNS_11char_traitsIcEEE4openEPKcj(void* thiz, const char* __s, unsigned int mode);
@@ -90,7 +99,7 @@ int JBPATH_SHIM_API(open)(const char * path, int flags, ...)
     va_end(ap);
     const char* newpath = jbpathat_alloc(AT_FDCWD, path, oflag_to_atflag(flags));
     int ret = open(newpath, flags, mode);
-    free((void*)newpath);
+    if(newpath) free((void*)newpath);
     return ret;
 }
 
@@ -103,7 +112,7 @@ int JBPATH_SHIM_API(openat)(int fd, const char * path, int flags, ...)
     va_end(ap);
     const char* newpath = jbpathat_alloc(fd, path, oflag_to_atflag(flags));
     int ret = openat(fd, newpath, flags, mode);
-    free((void*)newpath);
+    if(newpath) free((void*)newpath);
     return ret;
 }
 
@@ -113,8 +122,8 @@ int JBPATH_SHIM_API(link)(const char *name1, const char *name2)
     const char* newname1 = jbpath_alloc(name1);
     const char* newname2 = jbpath_alloc(name2);
     int ret = link(newname1, newname2);
-    free((void*)newname1);
-    free((void*)newname2);
+    if(newname1) free((void*)newname1);
+    if(newname2) free((void*)newname2);
     return ret;
 }
 
@@ -123,8 +132,8 @@ int JBPATH_SHIM_API(symlink)(const char *name1, const char *name2)
     const char* newname1 = jbpath_alloc(name1);
     const char* newname2 = jbpath_alloc(name2);
     int ret = symlink(newname1, newname2);
-    free((void*)newname1);
-    free((void*)newname2);
+    if(newname1) free((void*)newname1);
+    if(newname2) free((void*)newname2);
     return ret;
 }
 
@@ -136,7 +145,7 @@ int JBPATH_SHIM_API(execvp)(const char * __file, char * const * __argv)
     {
         const char* newpath = jbpath_alloc(__file);
         int ret = execvp(newpath, __argv);
-        free((void*)newpath);
+        if(newpath) free((void*)newpath);
         return ret;
     }
     return execvp(__file, __argv);
@@ -149,7 +158,7 @@ int JBPATH_SHIM_API(execvP)(const char * __file, const char * __searchpath, char
     {
         const char* newpath = jbpath_alloc(__file);
         int ret = execvP(newpath, __searchpath, __argv);
-        free((void*)newpath);
+        if(newpath) free((void*)newpath);
         return ret;
     }
     return execvP(__file, __searchpath, __argv);
@@ -175,7 +184,7 @@ int JBPATH_SHIM_API(execl)(const char *path, const char *arg0, ...)
     }
     argv[arg_count] = NULL;
 
-    return jbpath_shim_execv(path, argv);
+    return JBPATH_SHIM_API(execv)(path, argv);
 }
 
 int JBPATH_SHIM_API(execle)(const char *path, const char *arg0, ... /*, (char *)0, char *const envp[] */)
@@ -201,7 +210,7 @@ int JBPATH_SHIM_API(execle)(const char *path, const char *arg0, ... /*, (char *)
     //char *nullChar = va_arg(args, char*);
 
     char **envp = va_arg(args, char**);
-    return jbpath_shim_execve(path, argv, envp);
+    return JBPATH_SHIM_API(execve)(path, argv, envp);
 }
 
 int JBPATH_SHIM_API(execlp)(const char *file, const char *arg0, ...)
@@ -225,7 +234,7 @@ int JBPATH_SHIM_API(execlp)(const char *file, const char *arg0, ...)
     }
     argv[arg_count] = NULL;
 
-    return jbpath_shim_execvp(file, argv);
+    return JBPATH_SHIM_API(execvp)(file, argv);
 }
 
 
@@ -234,8 +243,8 @@ int JBPATH_SHIM_API(rename)(const char *__old, const char *__new)
     const char* new__old = jbpath_alloc(__old);
     const char* new__new = jbpath_alloc(__new);
     int ret = rename(new__old, new__new);
-    free((void*)new__old);
-    free((void*)new__new);
+    if(new__old) free((void*)new__old);
+    if(new__new) free((void*)new__new);
     return ret;
 }
 
@@ -245,8 +254,8 @@ int JBPATHAT_SHIM_API(linkat)(int fd1, const char *name1, int fd2, const char *n
     const char* newname1 = jbpathat_alloc(fd1, name1, 0);
     const char* newname2 = jbpathat_alloc(fd2, name2, 0);
     int ret = linkat(fd1, newname1, fd2, newname2, flag);
-    free((void*)newname1);
-    free((void*)newname2);
+    if(newname1) free((void*)newname1);
+    if(newname2) free((void*)newname2);
     return ret;
 }
 
@@ -255,8 +264,8 @@ int JBPATHAT_SHIM_API(symlinkat)(const char *name1, int fd, const char *name2)
     const char* newname1 = jbpath_alloc(name1);
     const char* newname2 = jbpathat_alloc(fd, name2, 0); //***********
     int ret = symlinkat(newname1, fd, newname2);
-    free((void*)newname1);
-    free((void*)newname2);
+    if(newname1) free((void*)newname1);
+    if(newname2) free((void*)newname2);
     return ret;
 }
 
@@ -269,7 +278,7 @@ int JBPATH_SHIM_API(shm_open)(const char * path, int flags, ...)
     va_end(ap);
     const char* newpath = jbpath_alloc(path);
     int ret = shm_open(newpath, flags, mode);
-    free((void*)newpath);
+    if(newpath) free((void*)newpath);
     return ret;
 }
 
@@ -282,7 +291,7 @@ sem_t* JBPATH_SHIM_API(sem_open)(const char *path, int flags, ...)
     va_end(ap);
     const char* newpath = jbpath_alloc(path);
     sem_t* ret = sem_open(newpath, flags, mode);
-    free((void*)newpath);
+    if(newpath) free((void*)newpath);
     return ret;
 }
 
@@ -291,8 +300,8 @@ int JBPATH_SHIM_API(copyfile)(const char * from, const char * to, copyfile_state
     const char* newfrom = jbpath_alloc(from);
     const char* newto = jbpath_alloc(to);
     int ret = copyfile(newfrom, newto, state, flags);
-    free((void*)newfrom);
-    free((void*)newto);
+    if(newfrom) free((void*)newfrom);
+    if(newto) free((void*)newto);
     return ret;
 }
 
@@ -301,8 +310,8 @@ int JBPATHAT_SHIM_API(renameat)(int fromfd, const char *from, int tofd, const ch
     const char* newfrom = jbpathat_alloc(fromfd, from, 0);
     const char* newto = jbpathat_alloc(tofd, to, 0);
     int ret = renameat(fromfd, newfrom, tofd, newto);
-    free((void*)newfrom);
-    free((void*)newto);
+    if(newfrom) free((void*)newfrom);
+    if(newto) free((void*)newto);
     return ret;
 }
 
@@ -311,8 +320,8 @@ int JBPATH_SHIM_API(renamex_np)(const char *__old, const char *__new, unsigned i
     const char* new__old = jbpath_alloc(__old);
     const char* new__new = jbpath_alloc(__new);
     int ret = renamex_np(new__old, new__new, flags);
-    free((void*)new__old);
-    free((void*)new__new);
+    if(new__old) free((void*)new__old);
+    if(new__new) free((void*)new__new);
     return ret;
 }
 
@@ -321,8 +330,8 @@ int JBPATHAT_SHIM_API(renameatx_np)(int fromfd, const char *from, int tofd, cons
     const char* newfrom = jbpathat_alloc(fromfd, from, flags);
     const char* newto = jbpathat_alloc(tofd, to, flags);
     int ret = renameatx_np(fromfd, newfrom, tofd, newto, flags);
-    free((void*)newfrom);
-    free((void*)newto);
+    if(newfrom) free((void*)newfrom);
+    if(newto) free((void*)newto);
     return ret;
 }
 
@@ -331,144 +340,157 @@ int JBPATH_SHIM_API(exchangedata)(const char * path1,const char * path2,unsigned
     const char* newpath1 = jbpath_alloc(path1);
     const char* newpath2 = jbpath_alloc(path2);
     int ret = exchangedata(newpath1, newpath2, options);
-    free((void*)newpath1);
-    free((void*)newpath2);
+    if(newpath1) free((void*)newpath1);
+    if(newpath2) free((void*)newpath2);
     return ret;
 }
 
-char* JBPATH_SHIM_API(mkdtemp)(char* path)
+char* JBPATH_SHIM_API(realpath)(const char * path, char *resolved_path)
 {
-    mktemp(path);
-    
+    char pathbuf[PATH_MAX]={0};
     const char* newpath = jbpath_alloc(path);
-    char* ret = mkdtemp((char*)newpath);
-    free((void*)newpath);
-        
-    return ret ? path : NULL;
-}
+    char* ret = realpath(newpath, pathbuf);
 
-int JBPATH_SHIM_API(mkstemp)(char * path)
-{
-    mktemp(path);
-    
-    const char* newpath = jbpath_alloc(path);
-    int ret = mkstemp((char*)newpath);
-    free((void*)newpath);
-    return ret;
-}
-
-int JBPATH_SHIM_API(mkostemp)(char * path, int oflags)
-{
-    mktemp(path);
-    
-    const char* newpath = jbpath_alloc(path);
-    int ret = mkostemp((char*)newpath, oflags);
-    free((void*)newpath);
-    return ret;
-}
-
-//https://github.com/apple-oss-distributions/Libc/blob/7861c72b1692b65f79c03f21a8a1a8e51e14c843/stdio/FreeBSD/mktemp.c#L104
-int mktemps(int dfd, char* path, int slen)
-{
-    size_t len = strlen(path);
-    if(len < slen)
-        return 0;
-    
-    char suffix[PATH_MAX];
-    strncpy(suffix, path+len-slen, slen);
-    bzero(path+len-slen, slen);
-    
-    if(strchr(suffix, '/'))
-        return 0;
-    
-    char tmp[PATH_MAX];
-    
-    while(true)
+    //ret = pathbuf or NULL
+    if(ret || resolved_path)
     {
-        strncpy(tmp, path, PATH_MAX);
-        mktemp(tmp);
-        strcat(tmp, suffix);
-        
-        struct stat sbuf;
-        if (fstatat(dfd, path, &sbuf, AT_SYMLINK_NOFOLLOW))
+        const char* rp = jbpath_revert_alloc(pathbuf);
+        //if(!rp)
+////        {
+//            FILE* fp = fopen("/var/revert.log", "a");
+//            fprintf(fp, "path=%p,%s newpath=%p,%s pathbuf=%s rp=%p,%s ret=%p,arg=%p\n", path,path, newpath,newpath, pathbuf, rp,rp,  ret,resolved_path);
+//            fclose(fp);
+////        }
+
+        if(resolved_path) {
+            strncpy(resolved_path, rp, PATH_MAX);
+            if(ret) ret = resolved_path;
+        }
+        else if(ret) {
+            ret = strdup(rp);
+        }
+
+        free((void*)rp);
+    }
+    
+    if(newpath) free((void*)newpath);
+    
+    return ret;
+}
+
+char* JBPATH_SHIM_API(realpath$DARWIN_EXTSN)(const char * path, char *resolved_path)
+{
+    char pathbuf[PATH_MAX]={0};
+    const char* newpath = jbpath_alloc(path);
+    char* ret = realpath$DARWIN_EXTSN(newpath, pathbuf);
+
+    if(ret || resolved_path)
+    {
+        const char* rp = jbpath_revert_alloc(pathbuf);
+        //if(!rp)
+//        {
+//            FILE* fp = fopen("/var/revert.log", "a");
+//            fprintf(fp, "path=%p,%s newpath=%p,%s pathbuf=%s rp=%p,%s ret=%p,arg=%p\n", path,path, newpath,newpath, pathbuf, rp,rp,  ret,resolved_path);
+//            fclose(fp);
+//        }
+
+        if(resolved_path) {
+            strncpy(resolved_path, rp, PATH_MAX);
+            if(ret) ret = resolved_path;
+        }
+        else if(ret) {
+            ret = strdup(rp);
+        }
+
+        free((void*)rp);
+    }
+    
+    if(newpath) free((void*)newpath);
+    
+    return ret;
+}
+
+#define F_OPENFROM      56              /* SPI: open a file relative to fd (must be a dir) */
+#define F_UNLINKFROM    57              /* SPI: open a file relative to fd (must be a dir) */
+#define F_CHECK_OPENEVT 58              /* SPI: if a process is marked OPENEVT, or in O_EVTONLY on opens of this vnode */
+#define F_OFD_SETLK             90      /* Acquire or release open file description lock */
+#define F_OFD_SETLKW            91      /* (as F_OFD_SETLK but blocking if conflicting lock) */
+#define F_OFD_GETLK             92      /* Examine OFD lock */
+#define F_OFD_SETLKWTIMEOUT     93      /* (as F_OFD_SETLKW but return if timeout) */
+#define F_OFD_GETLKPID          94      /* get record locking information */
+#define F_SETCONFINED           95      /* "confine" OFD to process */
+#define F_GETCONFINED           96      /* is-fd-confined? */
+int JBPATH_SHIM_API(fcntl)(int fd, int cmd, ...)
+{
+    va_list ap;
+    void *arg;
+
+    va_start(ap, cmd);
+    switch (cmd) {
+    case F_GETLK:
+    case F_GETLKPID:
+    case F_SETLK:
+    case F_SETLKW:
+    case F_SETLKWTIMEOUT:
+    case F_OFD_GETLK:
+    case F_OFD_GETLKPID:
+    case F_OFD_SETLK:
+    case F_OFD_SETLKW:
+    case F_OFD_SETLKWTIMEOUT:
+    case F_PREALLOCATE:
+    case F_PUNCHHOLE:
+    case F_SETSIZE:
+    case F_RDADVISE:
+    case F_LOG2PHYS:
+    case F_LOG2PHYS_EXT:
+    case F_GETPATH:
+    case F_GETPATH_NOFIRMLINK:
+    case F_GETPATH_MTMINFO:
+    case F_GETCODEDIR:
+    case F_PATHPKG_CHECK:
+    case F_OPENFROM:
+    case F_UNLINKFROM:
+    case F_ADDSIGS:
+    case F_ADDFILESIGS:
+    case F_ADDFILESIGS_FOR_DYLD_SIM:
+    case F_ADDFILESIGS_RETURN:
+    case F_ADDFILESIGS_INFO:
+    case F_ADDFILESUPPL:
+    case F_FINDSIGS:
+    case F_TRANSCODEKEY:
+    case F_TRIM_ACTIVE_FILE:
+    case F_SPECULATIVE_READ:
+    case F_CHECK_LV:
+    case F_GETSIGSINFO:
+        arg = va_arg(ap, void *);
+        break;
+    default:
+        arg = (void *)((unsigned long)va_arg(ap, int));
+        break;
+    }
+    va_end(ap);
+    
+    int ret = fcntl(fd, cmd, arg);
+    
+    if(ret == 0)
+    {
+        if(cmd == F_GETPATH)
         {
-            if(errno == ENOENT) break;
+            char* pathbuf = arg;
+            if(pathbuf) {
+                const char* rp = jbpath_revert_alloc(pathbuf);
+                strncpy(pathbuf, rp, PATH_MAX);
+                if(rp) free((void*)rp);
+            }
         }
     }
     
-    strncpy(path, tmp, PATH_MAX);
-    
-    return 1;
-}
-
-int JBPATH_SHIM_API(mkstemps)(char *_template, int suffixlen)
-{
-    mktemps(AT_FDCWD, _template, suffixlen);
-    
-    const char* newpath = jbpath_alloc(_template);
-    int ret = mkstemps((char*)newpath, suffixlen);
-    free((void*)newpath);
     return ret;
 }
 
-int JBPATH_SHIM_API(mkostemps)(char * path, int slen, int oflags)
+int stat64(const char *, void *);
+void __testfunc()
 {
-    mktemps(AT_FDCWD, path, slen);
-    
-    const char* newpath = jbpath_alloc(path);
-    int ret = mkostemp((char*)newpath, oflags);
-    free((void*)newpath);
-    return ret;
+    stat64(0,0);
 }
-
-#ifdef TARGET_OS_IPHONE
-int JBPATHAT_SHIM_API(mkstemp_dprotected_np)(char *path, int dpclass, int dpflags)
-{
-    mktemp(path);
-    
-    const char* newpath = jbpathat_alloc(fd, path);
-    int ret = mkstemp_dprotected_np((char*)newpath, dpclass, dpflags);
-    free((void*)newpath);
-    return ret;
-}
-#endif
-
-char* JBPATHAT_SHIM_API(mkdtempat_np)(int dfd, char *path)
-{
-    mktemp(path);
-    
-    const char* newpath = jbpathat_alloc(dfd, path, 0);
-    char* ret = mkdtempat_np(dfd, (char*)newpath);
-    free((void*)newpath);
-        
-    return ret ? path : NULL;
-}
-
-int JBPATHAT_SHIM_API(mkstempsat_np)(int dfd, char *path, int slen)
-{
-    mktemps(dfd, path, slen);
-    
-    const char* newpath = jbpathat_alloc(dfd, path, 0);
-    int ret = mkstempsat_np(dfd, (char*)newpath, slen);
-    free((void*)newpath);
-        
-    return ret;
-}
-
-int JBPATHAT_SHIM_API(mkostempsat_np)(int dfd, char*path, int slen, int oflags)
-{
-    mktemps(dfd, path, slen);
-    
-    const char* newpath = jbpathat_alloc(dfd, path, 0);
-    int ret = mkostempsat_np(dfd, (char*)newpath, slen, oflags);
-    free((void*)newpath);
-        
-    return ret;
-}
-
-//int stat64(const char *, void *);
-//void __testfunc()
-//{
-//    stat64(0,0);
-//}
 
