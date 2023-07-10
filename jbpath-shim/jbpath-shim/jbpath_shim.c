@@ -345,70 +345,70 @@ int JBPATH_SHIM_API(exchangedata)(const char * path1,const char * path2,unsigned
     return ret;
 }
 
-char* JBPATH_SHIM_API(realpath)(const char * path, char *resolved_path)
-{
-    char pathbuf[PATH_MAX]={0};
-    const char* newpath = jbpath_alloc(path);
-    char* ret = realpath(newpath, pathbuf);
-
-    //ret = pathbuf or NULL
-    if(ret || resolved_path)
-    {
-        const char* rp = jbpath_revert_alloc(pathbuf);
-        //if(!rp)
-////        {
-//            FILE* fp = fopen("/var/revert.log", "a");
-//            fprintf(fp, "path=%p,%s newpath=%p,%s pathbuf=%s rp=%p,%s ret=%p,arg=%p\n", path,path, newpath,newpath, pathbuf, rp,rp,  ret,resolved_path);
-//            fclose(fp);
-////        }
-
-        if(resolved_path) {
-            strncpy(resolved_path, rp, PATH_MAX);
-            if(ret) ret = resolved_path;
-        }
-        else if(ret) {
-            ret = strdup(rp);
-        }
-
-        free((void*)rp);
-    }
-    
-    if(newpath) free((void*)newpath);
-    
-    return ret;
-}
-
-char* JBPATH_SHIM_API(realpath$DARWIN_EXTSN)(const char * path, char *resolved_path)
-{
-    char pathbuf[PATH_MAX]={0};
-    const char* newpath = jbpath_alloc(path);
-    char* ret = realpath$DARWIN_EXTSN(newpath, pathbuf);
-
-    if(ret || resolved_path)
-    {
-        const char* rp = jbpath_revert_alloc(pathbuf);
-        //if(!rp)
-//        {
-//            FILE* fp = fopen("/var/revert.log", "a");
-//            fprintf(fp, "path=%p,%s newpath=%p,%s pathbuf=%s rp=%p,%s ret=%p,arg=%p\n", path,path, newpath,newpath, pathbuf, rp,rp,  ret,resolved_path);
-//            fclose(fp);
+//char* JBPATH_SHIM_API(realpath)(const char * path, char *resolved_path)
+//{
+//    char pathbuf[PATH_MAX]={0};
+//    const char* newpath = jbpath_alloc(path);
+//    char* ret = realpath(newpath, pathbuf);
+//
+//    //ret = pathbuf or NULL
+//    if(ret || resolved_path)
+//    {
+//        const char* rp = jbpath_revert_alloc(pathbuf);
+//        //if(!rp)
+//////        {
+////            FILE* fp = fopen("/var/revert.log", "a");
+////            fprintf(fp, "path=%p,%s newpath=%p,%s pathbuf=%s rp=%p,%s ret=%p,arg=%p\n", path,path, newpath,newpath, pathbuf, rp,rp,  ret,resolved_path);
+////            fclose(fp);
+//////        }
+//
+//        if(resolved_path) {
+//            strncpy(resolved_path, rp, PATH_MAX);
+//            if(ret) ret = resolved_path;
 //        }
-
-        if(resolved_path) {
-            strncpy(resolved_path, rp, PATH_MAX);
-            if(ret) ret = resolved_path;
-        }
-        else if(ret) {
-            ret = strdup(rp);
-        }
-
-        free((void*)rp);
-    }
-    
-    if(newpath) free((void*)newpath);
-    
-    return ret;
-}
+//        else if(ret) {
+//            ret = strdup(rp);
+//        }
+//
+//        free((void*)rp);
+//    }
+//
+//    if(newpath) free((void*)newpath);
+//
+//    return ret;
+//}
+//
+//char* JBPATH_SHIM_API(realpath$DARWIN_EXTSN)(const char * path, char *resolved_path)
+//{
+//    char pathbuf[PATH_MAX]={0};
+//    const char* newpath = jbpath_alloc(path);
+//    char* ret = realpath$DARWIN_EXTSN(newpath, pathbuf);
+//
+//    if(ret || resolved_path)
+//    {
+//        const char* rp = jbpath_revert_alloc(pathbuf);
+//        //if(!rp)
+////        {
+////            FILE* fp = fopen("/var/revert.log", "a");
+////            fprintf(fp, "path=%p,%s newpath=%p,%s pathbuf=%s rp=%p,%s ret=%p,arg=%p\n", path,path, newpath,newpath, pathbuf, rp,rp,  ret,resolved_path);
+////            fclose(fp);
+////        }
+//
+//        if(resolved_path) {
+//            strncpy(resolved_path, rp, PATH_MAX);
+//            if(ret) ret = resolved_path;
+//        }
+//        else if(ret) {
+//            ret = strdup(rp);
+//        }
+//
+//        free((void*)rp);
+//    }
+//    
+//    if(newpath) free((void*)newpath);
+//    
+//    return ret;
+//}
 
 #define F_OPENFROM      56              /* SPI: open a file relative to fd (must be a dir) */
 #define F_UNLINKFROM    57              /* SPI: open a file relative to fd (must be a dir) */

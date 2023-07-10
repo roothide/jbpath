@@ -185,10 +185,11 @@ JBPATH_SHIM_WRAP(int, statx_np, (const char *path, struct stat *st, filesec_t fs
 
 /* stdlib.h */
 //int system(const char *) __DARWIN_ALIAS_C(system); //shim in sh instead of here *******************************
-JBPATH_SHIM_DEF(char*, realpath, (const char * path, char *resolved_path))
-JBPATH_SHIM_DEF(char*, realpath$DARWIN_EXTSN, (const char * path, char *resolved_path))
-//JBPATH_SHIM_WRAP(char*, realpath, (const char * path, char *resolved_path), (newpath,resolved_path), path)
-//JBPATH_SHIM_WRAP(char*, realpath$DARWIN_EXTSN, (const char * path, char *resolved_path), (newpath,resolved_path), path)
+//JBPATH_SHIM_DEF(char*, realpath, (const char * path, char *resolved_path))
+//JBPATH_SHIM_DEF(char*, realpath$DARWIN_EXTSN, (const char * path, char *resolved_path))
+//some binraries in bootstrap dependent realpath to handle /var/jb/
+JBPATH_SHIM_WRAP(char*, realpath, (const char * path, char *resolved_path), (newpath,resolved_path), path)
+JBPATH_SHIM_WRAP(char*, realpath$DARWIN_EXTSN, (const char * path, char *resolved_path), (newpath,resolved_path), path)
 //already defined in unistd.h char* mktemp(char *path)
 //already defined in unistd.h int mkstemp(char *path)
 
