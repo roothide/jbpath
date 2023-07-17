@@ -1,6 +1,12 @@
 #include <stdio.h>
 #include <string>
-#include "jbpath.h"
+
+#include "jbroot.h"
+#define jbpath_alloc(a) jbroot_alloc(a)
+#define jbpathat_alloc(a,b) jbroot_alloc(b)
+#define jbpath_revert_alloc(a) jbroot_revert(a)
+
+
 
 using namespace std;
 

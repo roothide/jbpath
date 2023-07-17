@@ -5,15 +5,14 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/syslimits.h>
-#include "jbpath.h"
+#include "jbroot.h"
 
 #define JBROOT_SYMLINK_NAME ".jbroot"
-#define JBROOT_SYMLINK_PATH "/var/jb"
 
 int main(int argc, const char * argv[]) {
     
     struct stat jbsymst;
-    assert(lstat(jbpath(JBROOT_SYMLINK_PATH), &jbsymst) == 0);
+    assert(lstat(jbroot("/"), &jbsymst) == 0);
     
     char path[PATH_MAX];
     while(fgets(path, sizeof(path), stdin)) {
@@ -21,7 +20,7 @@ int main(int argc, const char * argv[]) {
         if(len && path[len-1]=='\n') path[len-1]='\0';
         
         struct stat st;
-        assert(lstat(jbpath(path), &st) == 0);
+        assert(lstat(jbroot(path), &st) == 0);
         
         //don't change jbroot symlink
         if(st.st_dev==jbsymst.st_dev && st.st_ino==jbsymst.st_ino) {
@@ -30,7 +29,7 @@ int main(int argc, const char * argv[]) {
         }
         
         char slink[PATH_MAX]={0}; //readlink not padding with \0
-        assert(readlink(jbpath(path), slink, sizeof(slink)-1)>0);
+        assert(readlink(jbroot(path), slink, sizeof(slink)-1)>0);
         
         printf("%s: %s\n", path, slink);
         
@@ -38,9 +37,9 @@ int main(int argc, const char * argv[]) {
            && (slink[sizeof(JBROOT_SYMLINK_NAME)-1]=='/' || slink[sizeof(JBROOT_SYMLINK_NAME)-1]=='\0'))
         {
             char abspath[PATH_MAX];
-            snprintf(abspath, sizeof(abspath), JBROOT_SYMLINK_PATH "%s", &slink[sizeof(JBROOT_SYMLINK_NAME)-1]);
+            snprintf(abspath, sizeof(abspath), "%s", &slink[sizeof(JBROOT_SYMLINK_NAME)-1]);
             
-            const char* newpath = jbpath(abspath);
+            const char* newpath = jbroot(abspath);
             
 //            assert(unlink(jbpath(path)) == 0);
 //            assert(symlink(newpath, jbpath(path)) == 0);
@@ -50,20 +49,20 @@ int main(int argc, const char * argv[]) {
         }
         else if(slink[0] == '/')
         {
-            const char* newpath = jbpath_revert(slink);
+            const char* newpath = jbroot_revert(slink);
             if(strcmp(newpath, slink)==0) {
                 printf("not in jbroot\n");
                 continue;
             }
             
-            newpath = jbpath(newpath);
+            newpath = jbroot(newpath);
             if(strcmp(newpath, slink)==0) {
                 printf("no change\n");
                 continue;
             }
             
-            assert(unlink(jbpath(path)) == 0);
-            assert(symlink(newpath, jbpath(path)) == 0);
+            assert(unlink(jbroot(path)) == 0);
+            assert(symlink(newpath, jbroot(path)) == 0);
             
             printf("=> %s\n", newpath);
         }

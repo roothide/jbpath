@@ -1,7 +1,7 @@
 Package: com.roothide.jbpath
 Name: jbpath
 Version: 0.0.1
-Architecture: iphoneos-arm
+Architecture: iphoneos-arm64
 Description: An awesome tool of some sort!!
 Maintainer: roothide
 Author: roothide

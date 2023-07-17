@@ -21,33 +21,33 @@
 //#define LOG(...) {char* jbpathlog = getenv("JBPATHLOG"); if((jbpathlog && *jbpathlog)||access("/var/.jbpathlog", F_OK)==0) {printf(__VA_ARGS__);fflush(stdout);}}
 #define LOG(...) {openlog("openssh",LOG_PID,LOG_AUTH);syslog(LOG_DEBUG, __VA_ARGS__);closelog();}
 
-const char* JBRAND=NULL;
-const char* JBROOT=NULL;
+static const char* JBRAND=NULL;
+static const char* JBROOT=NULL;
 
-void __attribute__((__constructor__)) _jbpath_init()
-{
-    if(access("/var/.jbpathtest", F_OK)==0||getenv("JBPATHTEST")) {
-        setenv("JBRAND", "1234567890ABCDEF", 1);
-        setenv("JBROOT", "/private/var/jbroot-1234567890ABCDEF", 1);
-    }
-    
-    JBRAND = getenv("JBRAND");
-    JBROOT = getenv("JBROOT");
-    
-    assert(JBRAND != NULL && JBROOT != NULL);
-    
-    JBRAND = strdup(JBRAND);
-    JBROOT = strdup(JBROOT);
-}
+//static void __attribute__((__constructor__)) _jbpath_init()
+//{
+//    if(access("/var/.jbpathtest", F_OK)==0||getenv("JBPATHTEST")) {
+//        setenv("JBRAND", "1234567890ABCDEF", 1);
+//        setenv("JBROOT", "/private/var/jbroot-1234567890ABCDEF", 1);
+//    }
+//    
+//    JBRAND = getenv("JBRAND");
+//    JBROOT = getenv("JBROOT");
+//    
+//    assert(JBRAND != NULL && JBROOT != NULL);
+//    
+//    JBRAND = strdup(JBRAND);
+//    JBROOT = strdup(JBROOT);
+//}
 
-int is_jbrand_value(uint64_t value)
+static int is_jbrand_value(uint64_t value)
 {
 //    uint8_t check = value>>8 ^ value >> 16 ^ value>>24 ^ value>>32 ^ value>>40 ^ value>>48 ^ value>>56;
 //    return check == (uint8_t)value;
     return 1;
 }
 
-int is_jbroot_name(const char* name)
+static int is_jbroot_name(const char* name)
 {
     if(strlen(name) != (sizeof(JB_ROOT_PREFIX)-1+JB_RAND_LENGTH))
         return 0;
@@ -67,7 +67,7 @@ int is_jbroot_name(const char* name)
 }
 
 //free after use
-const char* __private_jbpathat_alloc(int fd, const char* path)
+static const char* __private_jbpathat_alloc(int fd, const char* path)
 {
     char atdir[PATH_MAX]={0};
     fd==AT_FDCWD ? (long)getcwd(atdir,sizeof(atdir)) : fcntl(fd, F_GETPATH, atdir, sizeof(atdir));
@@ -167,7 +167,7 @@ const char* __private_jbpathat_alloc(int fd, const char* path)
 
 
 //free after use
-const char* __private_jbpath_revert_alloc(const char* path)
+static const char* __private_jbpath_revert_alloc(const char* path)
 {
     LOG(" **jbpath_revert_alloc %s\n", path);
     

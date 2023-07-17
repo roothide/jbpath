@@ -1,6 +1,6 @@
-#!/var/jb/bin/sh
+#!/bin/sh
 
-find /var/jb/ -type l | /var/jb/usr/sbin/updatelink
+# find / -type l | /var/jb/usr/sbin/updatelink
 
 exit 0
 

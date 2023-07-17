@@ -27,7 +27,12 @@
  * SUCH DAMAGE.
  */
 
-#include "jbpath.h"
+#include "jbroot.h"
+#define jbpath_alloc(a) jbroot_alloc(a)
+#define jbpathat_alloc(a,b) jbroot_alloc(b)
+#define jbpath_revert_alloc(a) jbroot_revert(a)
+
+
 
 #define JBPATH_SHIM_API(NAME) jbpath_shim_##NAME
 #define JBPATHAT_SHIM_API(NAME) jbpath_shim_##NAME
