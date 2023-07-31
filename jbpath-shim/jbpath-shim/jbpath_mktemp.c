@@ -28,11 +28,6 @@
  */
 
 #include "jbroot.h"
-#define jbpath_alloc(a) jbroot_alloc(a)
-#define jbpathat_alloc(a,b) jbroot_alloc(b)
-#define jbpath_revert_alloc(a) jbroot_revert(a)
-
-
 
 #define JBPATH_SHIM_API(NAME) jbpath_shim_##NAME
 #define JBPATHAT_SHIM_API(NAME) jbpath_shim_##NAME
@@ -236,7 +231,7 @@ find_temp_path(int dfd, char *path, int slen, bool stat_base_dir,
         for (; trv > path; --trv) {
             if (*trv == '/') {
                 *trv = '\0';
-                const char* newpath = jbpathat_alloc(dfd, path);
+                const char* newpath = jbrootat_alloc(dfd, path);
                 rval = fstatat(dfd, newpath, &sbuf, 0);
                 free((void*)newpath);
                 *trv = '/';
@@ -252,7 +247,7 @@ find_temp_path(int dfd, char *path, int slen, bool stat_base_dir,
     }
 
     for (;;) {
-        const char* newpath = jbpathat_alloc(dfd, path);
+        const char* newpath = jbrootat_alloc(dfd, path);
         int ar = action(dfd, (char*)newpath, action_ctx, action_result);
         free((void*)newpath);
         switch (ar) {

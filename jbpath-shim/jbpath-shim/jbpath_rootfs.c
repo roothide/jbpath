@@ -277,7 +277,7 @@ ssize_t JBPATHAT_SHIM_API(readlinkat)(int fd,const char* path,char* buf,size_t b
         char* linkbuf = malloc(bufsize+1);
         memcpy(linkbuf, buf, bufsize);
         linkbuf[ret] = '\0';
-        const char* newlink = jbroot_revert_alloc(linkbuf);
+        const char* newlink = rootfs_alloc(linkbuf);
         free((void*)linkbuf);
         memset(buf, 0, ret); //don't modify
         size_t len = strlen(newlink);

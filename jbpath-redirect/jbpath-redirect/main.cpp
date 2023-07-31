@@ -13,7 +13,7 @@
 #include <assert.h>
 #include <libgen.h>
 
-#define LOG(...)        //printf(__VA_ARGS__)
+#define LOG(...)        printf(__VA_ARGS__)
 
 #define STRIP_PREFIX    "jbpath_shim"
 
@@ -199,7 +199,7 @@ int processTarget(void* slice)
     struct mach_header_64* header = (struct mach_header_64*)slice;
     
     if((header->flags & MH_TWOLEVEL) == 0) {
-        fprintf(stderr, "mach-o has no MH_TWOLEVEL\n", magic);
+        fprintf(stderr, "mach-o has no MH_TWOLEVEL\n");
         return -1;
     }
     if((header->flags & MH_FORCE_FLAT) != 0) {
@@ -385,9 +385,9 @@ int processTarget(void* slice)
                     else
                         libOrdinal = libVal;
                     
-                    LOG("import[%d] ordinal=%x weak=%d name=%s\n", i, importsA32[i].lib_ordinal, importsA32[i].weak_import, symbolName);
+                    LOG("importA32[%d] ordinal=%x weak=%d name=%s\n", i, importsA32[i].lib_ordinal, importsA32[i].weak_import, symbolName);
                     if(processSymbol(header, libOrdinal, symbolName))
-                        imports[i].lib_ordinal = shimOrdinal;
+                        importsA32[i].lib_ordinal = shimOrdinal;
                 }
                 break;
             case DYLD_CHAINED_IMPORT_ADDEND64:
@@ -400,9 +400,9 @@ int processTarget(void* slice)
                     else
                         libOrdinal = libVal;
                     
-                    LOG("import[%d] ordinal=%x weak=%d name=%s\n", i, importsA64[i].lib_ordinal, importsA64[i].weak_import, symbolName);
+                    LOG("importA64[%d] ordinal=%x weak=%d name=%s\n", i, importsA64[i].lib_ordinal, importsA64[i].weak_import, symbolName);
                     if(processSymbol(header, libOrdinal, symbolName))
-                        imports[i].lib_ordinal = shimOrdinal;
+                        importsA64[i].lib_ordinal = shimOrdinal;
                 }
                 break;
            default:
@@ -474,7 +474,7 @@ int processMachO(const char* file, int (*process)(void*))
 int main(int argc, const char * argv[])
 {
     if(argc < 2 || argc > 3) {
-        printf("Usage: %s shim [target]\n", basename((char*)argv[0]));
+        printf("Usage: %s shim [target]\n", getprogname());
         return 0;
     }
     

@@ -25,12 +25,9 @@
 #include <fts.h>
 #include <glob.h>
 
-
 #include "jbroot.h"
-#define jbpath_alloc(a) jbroot_alloc(a)
-#define jbpathat_alloc(a,b,c) jbrootat_alloc(a,b)
-#define jbpath_revert_alloc(a) jbroot_revert(a)
 
+#define jbrootat_alloc(a,b,c) jbrootat_alloc(a,b)
 
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -50,7 +47,7 @@
 
 #define JBPATH_SHIM_WRAP(RET,NAME,ARGTYPES,ARGS,PATHARG) EXPORT RET jbpath_shim_##NAME ARGTYPES {\
 if(0)printf("*jbpath_shim_%s\n", #NAME);\
-    char* newpath = (char*)jbpath_alloc(PATHARG);\
+    char* newpath = (char*)jbroot_alloc(PATHARG);\
     RET ret = NAME ARGS;\
     if(newpath) free((void*)newpath);\
     return ret;\
@@ -58,7 +55,7 @@ if(0)printf("*jbpath_shim_%s\n", #NAME);\
 
 #define JBPATHAT_SHIM_WRAP(RET,NAME,ARGTYPES,ARGS,FD,PATHARG,ATFLAG) EXPORT RET jbpath_shim_##NAME ARGTYPES {\
 if(0)printf("*jbpathat_shim_%s\n", #NAME);\
-    char* newpath = (char*)jbpathat_alloc(FD,PATHARG,ATFLAG);\
+    char* newpath = (char*)jbrootat_alloc(FD,PATHARG,ATFLAG);\
     RET ret = NAME ARGS;\
     if(newpath) free((void*)newpath);\
     return ret;\
@@ -109,7 +106,7 @@ int JBPATH_SHIM_API(open)(const char * path, int flags, ...)
     va_start(ap, flags);
     mode = va_arg(ap, int);
     va_end(ap);
-    const char* newpath = jbpathat_alloc(AT_FDCWD, path, oflag_to_atflag(flags));
+    const char* newpath = jbrootat_alloc(AT_FDCWD, path, oflag_to_atflag(flags));
     int ret = open(newpath, flags, mode);
     
     if(ret<0 && errno==ENOTDIR && (flags&O_NOFOLLOW)) {
@@ -136,7 +133,7 @@ int JBPATH_SHIM_API(openat)(int fd, const char * path, int flags, ...)
     va_start(ap, flags);
     mode = va_arg(ap, int);
     va_end(ap);
-    const char* newpath = jbpathat_alloc(fd, path, oflag_to_atflag(flags));
+    const char* newpath = jbrootat_alloc(fd, path, oflag_to_atflag(flags));
     int ret = openat(fd, newpath, flags, mode);
     
     if(ret<0 && errno==ENOTDIR && (flags&O_NOFOLLOW)) {
@@ -163,7 +160,7 @@ int JBPATH_SHIM_API(open_dprotected_np)(const char *path, int flags, int class, 
     va_start(ap, dpflags);
     mode = va_arg(ap, int);
     va_end(ap);
-    const char* newpath = jbpathat_alloc(AT_FDCWD, path, oflag_to_atflag(flags));
+    const char* newpath = jbrootat_alloc(AT_FDCWD, path, oflag_to_atflag(flags));
     int ret = open_dprotected_np(newpath, flags, class, dpflags, mode);
     if(newpath) free((void*)newpath);
     return ret;
@@ -171,8 +168,8 @@ int JBPATH_SHIM_API(open_dprotected_np)(const char *path, int flags, int class, 
 
 int JBPATH_SHIM_API(link)(const char *name1, const char *name2)
 {
-    const char* newname1 = jbpath_alloc(name1);
-    const char* newname2 = jbpath_alloc(name2);
+    const char* newname1 = jbroot_alloc(name1);
+    const char* newname2 = jbroot_alloc(name2);
     int ret = link(newname1, newname2);
     if(newname1) free((void*)newname1);
     if(newname2) free((void*)newname2);
@@ -181,8 +178,8 @@ int JBPATH_SHIM_API(link)(const char *name1, const char *name2)
 
 int JBPATH_SHIM_API(symlink)(const char *name1, const char *name2)
 {
-    const char* newname1 = jbpath_alloc(name1);
-    const char* newname2 = jbpath_alloc(name2);
+    const char* newname1 = jbroot_alloc(name1);
+    const char* newname2 = jbroot_alloc(name2);
     int ret = symlink(newname1, newname2);
     if(newname1) free((void*)newname1);
     if(newname2) free((void*)newname2);
@@ -195,7 +192,7 @@ int JBPATH_SHIM_API(execvp)(const char * __file, char * const * __argv)
     /* If it's an absolute or relative path name, we need to handle. */
     if(__file && __file[0] && strchr(__file, '/'))
     {
-        const char* newpath = jbpath_alloc(__file);
+        const char* newpath = jbroot_alloc(__file);
         int ret = execvp(newpath, __argv);
         if(newpath) free((void*)newpath);
         return ret;
@@ -208,7 +205,7 @@ int JBPATH_SHIM_API(execvP)(const char * __file, const char * __searchpath, char
     /* If it's an absolute or relative path name, we need to handle. */
     if(__file && __file[0] && strchr(__file, '/'))
     {
-        const char* newpath = jbpath_alloc(__file);
+        const char* newpath = jbroot_alloc(__file);
         int ret = execvP(newpath, __searchpath, __argv);
         if(newpath) free((void*)newpath);
         return ret;
@@ -292,8 +289,8 @@ int JBPATH_SHIM_API(execlp)(const char *file, const char *arg0, ...)
 
 int JBPATH_SHIM_API(rename)(const char *__old, const char *__new)
 {
-    const char* new__old = jbpath_alloc(__old);
-    const char* new__new = jbpath_alloc(__new);
+    const char* new__old = jbroot_alloc(__old);
+    const char* new__new = jbroot_alloc(__new);
     int ret = rename(new__old, new__new);
     if(new__old) free((void*)new__old);
     if(new__new) free((void*)new__new);
@@ -303,8 +300,8 @@ int JBPATH_SHIM_API(rename)(const char *__old, const char *__new)
 int JBPATHAT_SHIM_API(linkat)(int fd1, const char *name1, int fd2, const char *name2, int flag)
 {
     /* flag is for name1 and only support AT_SYMLINK_FOLLOW, but its not about find path */
-    const char* newname1 = jbpathat_alloc(fd1, name1, 0);
-    const char* newname2 = jbpathat_alloc(fd2, name2, 0);
+    const char* newname1 = jbrootat_alloc(fd1, name1, 0);
+    const char* newname2 = jbrootat_alloc(fd2, name2, 0);
     int ret = linkat(fd1, newname1, fd2, newname2, flag);
     if(newname1) free((void*)newname1);
     if(newname2) free((void*)newname2);
@@ -313,8 +310,8 @@ int JBPATHAT_SHIM_API(linkat)(int fd1, const char *name1, int fd2, const char *n
 
 int JBPATHAT_SHIM_API(symlinkat)(const char *name1, int fd, const char *name2)
 {
-    const char* newname1 = jbpath_alloc(name1);
-    const char* newname2 = jbpathat_alloc(fd, name2, 0); //***********
+    const char* newname1 = jbroot_alloc(name1);
+    const char* newname2 = jbrootat_alloc(fd, name2, 0); //***********
     int ret = symlinkat(newname1, fd, newname2);
     if(newname1) free((void*)newname1);
     if(newname2) free((void*)newname2);
@@ -328,7 +325,7 @@ int JBPATH_SHIM_API(shm_open)(const char * path, int flags, ...)
     va_start(ap, flags);
     mode = va_arg(ap, int);
     va_end(ap);
-    const char* newpath = jbpath_alloc(path);
+    const char* newpath = jbroot_alloc(path);
     int ret = shm_open(newpath, flags, mode);
     if(newpath) free((void*)newpath);
     return ret;
@@ -341,7 +338,7 @@ sem_t* JBPATH_SHIM_API(sem_open)(const char *path, int flags, ...)
     va_start(ap, flags);
     mode = va_arg(ap, int);
     va_end(ap);
-    const char* newpath = jbpath_alloc(path);
+    const char* newpath = jbroot_alloc(path);
     sem_t* ret = sem_open(newpath, flags, mode);
     if(newpath) free((void*)newpath);
     return ret;
@@ -349,8 +346,8 @@ sem_t* JBPATH_SHIM_API(sem_open)(const char *path, int flags, ...)
 
 int JBPATH_SHIM_API(copyfile)(const char * from, const char * to, copyfile_state_t state, copyfile_flags_t flags)
 {
-    const char* newfrom = jbpath_alloc(from);
-    const char* newto = jbpath_alloc(to);
+    const char* newfrom = jbroot_alloc(from);
+    const char* newto = jbroot_alloc(to);
     int ret = copyfile(newfrom, newto, state, flags);
     if(newfrom) free((void*)newfrom);
     if(newto) free((void*)newto);
@@ -359,8 +356,8 @@ int JBPATH_SHIM_API(copyfile)(const char * from, const char * to, copyfile_state
 
 int JBPATHAT_SHIM_API(renameat)(int fromfd, const char *from, int tofd, const char *to)
 {
-    const char* newfrom = jbpathat_alloc(fromfd, from, 0);
-    const char* newto = jbpathat_alloc(tofd, to, 0);
+    const char* newfrom = jbrootat_alloc(fromfd, from, 0);
+    const char* newto = jbrootat_alloc(tofd, to, 0);
     int ret = renameat(fromfd, newfrom, tofd, newto);
     if(newfrom) free((void*)newfrom);
     if(newto) free((void*)newto);
@@ -369,8 +366,8 @@ int JBPATHAT_SHIM_API(renameat)(int fromfd, const char *from, int tofd, const ch
 
 int JBPATH_SHIM_API(renamex_np)(const char *__old, const char *__new, unsigned int flags)
 {
-    const char* new__old = jbpath_alloc(__old);
-    const char* new__new = jbpath_alloc(__new);
+    const char* new__old = jbroot_alloc(__old);
+    const char* new__new = jbroot_alloc(__new);
     int ret = renamex_np(new__old, new__new, flags);
     if(new__old) free((void*)new__old);
     if(new__new) free((void*)new__new);
@@ -379,8 +376,8 @@ int JBPATH_SHIM_API(renamex_np)(const char *__old, const char *__new, unsigned i
 
 int JBPATHAT_SHIM_API(renameatx_np)(int fromfd, const char *from, int tofd, const char *to, unsigned int flags)
 {
-    const char* newfrom = jbpathat_alloc(fromfd, from, flags);
-    const char* newto = jbpathat_alloc(tofd, to, flags);
+    const char* newfrom = jbrootat_alloc(fromfd, from, flags);
+    const char* newto = jbrootat_alloc(tofd, to, flags);
     int ret = renameatx_np(fromfd, newfrom, tofd, newto, flags);
     if(newfrom) free((void*)newfrom);
     if(newto) free((void*)newto);
@@ -389,8 +386,8 @@ int JBPATHAT_SHIM_API(renameatx_np)(int fromfd, const char *from, int tofd, cons
 
 int JBPATH_SHIM_API(exchangedata)(const char * path1,const char * path2,unsigned int options)
 {
-    const char* newpath1 = jbpath_alloc(path1);
-    const char* newpath2 = jbpath_alloc(path2);
+    const char* newpath1 = jbroot_alloc(path1);
+    const char* newpath2 = jbroot_alloc(path2);
     int ret = exchangedata(newpath1, newpath2, options);
     if(newpath1) free((void*)newpath1);
     if(newpath2) free((void*)newpath2);
@@ -400,13 +397,13 @@ int JBPATH_SHIM_API(exchangedata)(const char * path1,const char * path2,unsigned
 char* JBPATH_SHIM_API(realpath)(const char * path, char *resolved_path)
 {
     char pathbuf[PATH_MAX]={0};
-    const char* newpath = jbpath_alloc(path);
+    const char* newpath = jbroot_alloc(path);
     char* ret = realpath(newpath, pathbuf);
 
     //ret = pathbuf or NULL
     if(ret || resolved_path)
     {
-        const char* rp = jbpath_revert_alloc(pathbuf);
+        const char* rp = rootfs_alloc(pathbuf);
         //if(!rp)
 ////        {
 //            FILE* fp = fopen("/var/revert.log", "a");
@@ -433,12 +430,12 @@ char* JBPATH_SHIM_API(realpath)(const char * path, char *resolved_path)
 char* JBPATH_SHIM_API(realpath$DARWIN_EXTSN)(const char * path, char *resolved_path)
 {
     char pathbuf[PATH_MAX]={0};
-    const char* newpath = jbpath_alloc(path);
+    const char* newpath = jbroot_alloc(path);
     char* ret = realpath$DARWIN_EXTSN(newpath, pathbuf);
 
     if(ret || resolved_path)
     {
-        const char* rp = jbpath_revert_alloc(pathbuf);
+        const char* rp = rootfs_alloc(pathbuf);
         //if(!rp)
 //        {
 //            FILE* fp = fopen("/var/revert.log", "a");
@@ -530,7 +527,7 @@ int JBPATH_SHIM_API(fcntl)(int fd, int cmd, ...)
         {
             char* pathbuf = arg;
             if(pathbuf) {
-                const char* rp = jbpath_revert_alloc(pathbuf);
+                const char* rp = rootfs_alloc(pathbuf);
                 strncpy(pathbuf, rp, PATH_MAX);
                 if(rp) free((void*)rp);
             }
@@ -616,7 +613,7 @@ int JBPATH_SHIM_API(getpeername)(int sockfd, struct sockaddr *addr, socklen_t* a
             path_max = sizeof(addr_un->sun_path);
         }
         if (addr_un->sun_path[0]) {
-            const char* newpath = jbroot_revert_alloc(addr_un->sun_path);
+            const char* newpath = rootfs_alloc(addr_un->sun_path);
             strlcpy(addr_un->sun_path, newpath, path_max);
             *addrlen = (socklen_t)SUN_LEN(addr_un);
             free((void*)newpath);
@@ -639,7 +636,7 @@ int JBPATH_SHIM_API(getsockname)(int sockfd, struct sockaddr *addr, socklen_t* a
             path_max = sizeof(addr_un->sun_path);
         }
         if (addr_un->sun_path[0]) {
-            const char* newpath = jbroot_revert_alloc(addr_un->sun_path);
+            const char* newpath = rootfs_alloc(addr_un->sun_path);
             strlcpy(addr_un->sun_path, newpath, path_max);
             *addrlen = (socklen_t)SUN_LEN(addr_un);
             free((void*)newpath);
@@ -655,7 +652,7 @@ int JBPATH_SHIM_API(dladdr)(const void * addr, Dl_info * info)
     if(ret != 0)
     {
         //need use cache
-        const char* newfname = jbroot_revert(info->dli_fname);
+        const char* newfname = rootfs_alloc(info->dli_fname);
         if(strcmp(info->dli_fname, newfname) != 0)
         {
             info->dli_fname = newfname;
@@ -675,7 +672,7 @@ char* JBPATH_SHIM_API(getwd)(char* buf)
 {
     char* ret = getwd(buf);
     if(ret) {
-        const char* newpath = jbroot_revert_alloc(ret);
+        const char* newpath = rootfs_alloc(ret);
         size_t len = strlcpy(buf, newpath, PATH_MAX);
         free((void*)newpath);
         if(len >= PATH_MAX) {
@@ -690,7 +687,7 @@ char* JBPATH_SHIM_API(getcwd)(char *buf, size_t bufsize)
 {
     char* ret = getcwd(buf, bufsize);
     if(ret) {
-        const char* newpath = jbroot_revert_alloc(ret);
+        const char* newpath = rootfs_alloc(ret);
         size_t len = strlcpy(buf, newpath, bufsize);
         free((void*)newpath);
         if(len >= PATH_MAX) {
@@ -707,7 +704,7 @@ int JBPATH_SHIM_API(glob)(const char * pattern, int flags, int (* errfunc) (cons
     if(ret == 0) {
         for(int i=0; i<pglob->gl_pathc; i++)
         {
-            const char* newpath = jbroot_revert_alloc(pglob->gl_pathv[i]);
+            const char* newpath = rootfs_alloc(pglob->gl_pathv[i]);
             if(strcmp(newpath, pglob->gl_pathv[i]) != 0)
             {
                 free((void*)pglob->gl_pathv[i]);
@@ -727,7 +724,7 @@ int JBPATH_SHIM_API(glob_b)(const char * pattern, int flags, int (^ errfunc) (co
     if(ret == 0) {
         for(int i=0; i<pglob->gl_pathc; i++)
         {
-            const char* newpath = jbroot_revert_alloc(pglob->gl_pathv[i]);
+            const char* newpath = rootfs_alloc(pglob->gl_pathv[i]);
             if(strcmp(newpath, pglob->gl_pathv[i]) != 0)
             {
                 free((void*)pglob->gl_pathv[i]);
@@ -744,7 +741,7 @@ int JBPATH_SHIM_API(glob_b)(const char * pattern, int flags, int (^ errfunc) (co
 int __thread (*ftw_callback)(const char *fpath, const struct stat *sb, int typeflag);
 int ftw_function(const char *fpath, const struct stat *sb, int typeflag)
 {
-    const char* newpath = jbroot_revert_alloc(fpath);
+    const char* newpath = rootfs_alloc(fpath);
     int ret = ftw_callback(newpath,sb,typeflag);
     free((void*)newpath);
     return ret;
@@ -762,7 +759,7 @@ int JBPATH_SHIM_API(ftw)(const char *dirpath, int (*fn)(const char *fpath, const
 int __thread (*nftw_callback)(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 int nftw_function(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
-    const char* newpath = jbroot_revert_alloc(fpath);
+    const char* newpath = rootfs_alloc(fpath);
     int ret = nftw_callback(newpath,sb,typeflag,ftwbuf);
     free((void*)newpath);
     return ret;

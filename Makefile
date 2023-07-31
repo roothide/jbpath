@@ -1,5 +1,5 @@
 
-ARCHS = arm64
+ARCHS = arm64 arm64e
 TARGET := iphone:clang:latest:15.0
 #THEOS_PACKAGE_SCHEME=rootless
 
@@ -29,7 +29,7 @@ TOOL_NAME = updatelink
 updatelink_FILES = jbpath-updatelink/updatelink/main.c
 updatelink_CFLAGS += -I./
 updatelink_LDFLAGS += -L$(THEOS_OBJ_DIR) -ljbpath
-updatelink_INSTALL_PATH = /usr/sbin
+updatelink_INSTALL_PATH = /usr/libexec
 updatelink_CODESIGN_FLAGS = -Sentitlements.plist
 
 
@@ -43,3 +43,6 @@ after-libjbpathapis-all::
 
 clean::
 	rm -rf ./packages/*
+
+after-install::
+	install.exec 'echo ok'

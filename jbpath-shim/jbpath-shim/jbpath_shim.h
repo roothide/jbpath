@@ -223,6 +223,10 @@ JBPATH_SHIM_WRAP(int, statfs, (const char * path, struct statfs *buf), (newpath,
 JBPATH_SHIM_WRAP(int, statfs64, (const char * path, struct statfs64 *buf), (newpath, buf), path)
 JBPATH_SHIM_WRAP(int, unmount, (const char *dir, int flags), (newpath,flags), dir)
 //not a path/int getvfsbyname(const char *fsname, struct vfsconf *vfcp);
+//int     getmntinfo(struct statfs **, int) __DARWIN_INODE64(getmntinfo);
+//int     getmntinfo_r_np(struct statfs **, int) __DARWIN_INODE64(getmntinfo_r_np)
+int     getfsstat(struct statfs *, int, int) __DARWIN_INODE64(getfsstat);
+int     getfsstat64(struct statfs64 *, int, int) __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_5, __MAC_10_6, __IPHONE_NA, __IPHONE_NA);
 
 /* mman.h */
 JBPATH_SHIM_DEF(int, shm_open, (const char * path, int flags, ...))

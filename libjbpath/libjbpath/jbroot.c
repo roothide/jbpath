@@ -10,17 +10,18 @@
 #include <sys/mount.h>
 #include <sys/param.h>
 #include <sys/syslimits.h>
+#include <mach-o/dyld.h>
 
 
 #define JB_ROOT_PARENT "/var"
-#define JB_ROOT_PREFIX "jbroot-"
+#define JB_ROOT_PREFIX ".jbroot-"
 #define JB_RAND_LENGTH  (sizeof(uint64_t)*sizeof(char)*2)
 
 #define ROOTFS_PREFIX   "/rootfs"
 
 #include <sys/syslog.h>
-//#define LOG(...) {openlog("openssh",LOG_PID,LOG_AUTH);syslog(LOG_DEBUG, __VA_ARGS__);closelog();}
-#define LOG(...) {char* jbpathlog = getenv("JBROOTLOG"); if((jbpathlog && *jbpathlog)||access("/var/.jbrootlog", F_OK)==0) {printf(__VA_ARGS__);fflush(stdout);}}
+#define LOG(...) {openlog("roothide",LOG_PID,LOG_AUTH);syslog(LOG_DEBUG, __VA_ARGS__);closelog();}
+//#define LOG(...) {char* jbpathlog = getenv("JBROOTLOG"); if((jbpathlog && *jbpathlog)||access("/var/.jbrootlog", F_OK)==0) {printf(__VA_ARGS__);fflush(stdout);}}
 
 
 static const char* JBRAND=NULL;
@@ -31,9 +32,9 @@ static void __attribute__((__constructor__)) _jbroot_init()
     if(access("/var/.jbroottest", F_OK)==0||getenv("JBROOTTEST"))
     {
         setenv("JBRAND", "1234567890ABCDEF", 1);
-        //setenv("JBROOT", "/private/var/jbroot-1234567890ABCDEF", 1);
+        //setenv("JBROOT", "/private/var/.jbroot-1234567890ABCDEF", 1);
         // use /var/ instead of /private/var/ because stringByResolvingSymlinksInPath won't resolve /var/
-        setenv("JBROOT", "/var/jbroot-1234567890ABCDEF", 1);
+        setenv("JBROOT", "/var/.jbroot-1234567890ABCDEF", 1);
     }
     
     JBRAND = getenv("JBRAND");
@@ -44,13 +45,38 @@ static void __attribute__((__constructor__)) _jbroot_init()
     JBRAND = strdup(JBRAND);
     JBROOT = strdup(JBROOT);
     
-    if(getppid()==1)
-    {
+    do { // only for jb process because some system process may crash when chdir
+        if(getppid() != 1)
+            break;
+        
+        char executablePath[PATH_MAX]={0};
+        uint32_t bufsize=sizeof(executablePath);
+        if(_NSGetExecutablePath(executablePath, &bufsize) != 0)
+            break;
+        
+        char realexepath[PATH_MAX];
+        if(!realpath(executablePath, realexepath))
+            break;
+            
+        char realjbroot[PATH_MAX];
+        if(!realpath(JBROOT, realjbroot))
+            break;
+        
+        if(realjbroot[strlen(realjbroot)] != '/')
+            strcat(realjbroot, "/");
+        
+        if(strncmp(realexepath, realjbroot, strlen(realjbroot)) != 0)
+            break;
+        
         char pwd[PATH_MAX];
-        assert(getcwd(pwd, sizeof(pwd)) != NULL);
-        if(strcmp(pwd, "/")==0)
-            assert(chdir(JBROOT)==0);
-    }
+        if(getcwd(pwd, sizeof(pwd)) == NULL)
+            break;
+        if(strcmp(pwd, "/") != 0)
+            break;
+    
+        assert(chdir(JBROOT)==0);
+        
+    } while(0);
 }
 
 
@@ -164,7 +190,7 @@ static const char* __private_jbrootat_alloc(int fd, const char* path)
                 while(*checkpath == '/') checkpath++;
             }
             if(*checkpath=='\0') checkpath = ".";
-            //hard link not allowed for directory
+            //resolved path is always in jbroot-dir
             if (fstatat(checkfd, checkpath, &sb, 0) == 0) {
                 //check if current path is jbroot-dir
                 if(sb.st_ino==jbrootst.st_ino
@@ -219,6 +245,27 @@ const char* jbrootat_alloc(int fd, const char* path)
     // empty or relative path?
     if(fixedpath[0] != '/') return fixedpath;
     
+    //its necessary for symlink /rootfs/xxx -> /rootfs/yyy
+    if(strlen(fixedpath)>=(sizeof("/rootfs")-1)
+       && strncmp(fixedpath, "/rootfs", sizeof("/rootfs")-1)==0)
+    {
+        
+//        char atdir[PATH_MAX]={0};
+//        fd==AT_FDCWD ? (long)getcwd(atdir,sizeof(atdir)) : fcntl(fd, F_GETPATH, atdir, sizeof(atdir));
+//        printf(" **rootfs--> (%d)%s\n\t%s\n\t%s\n", fd, atdir, path, fixedpath);
+        
+        if(fixedpath[sizeof("/rootfs")-1]=='/') {
+            char* newpath = strdup(&fixedpath[sizeof("/rootfs")-1]);
+            free((void*)fixedpath);
+            return newpath;
+        }
+        //break find / ???
+        if(fixedpath[sizeof("/rootfs")-1]=='\0') {
+            free((void*)fixedpath);
+            return strdup("/");
+        }
+    }
+    
     size_t pathlen = strlen(JBROOT) + strlen(fixedpath) + 1;
     char* newpath = malloc(pathlen);
     strcpy(newpath, JBROOT);
@@ -236,9 +283,9 @@ const char* jbroot_alloc(const char* path)
 }
 
 //free after use
-static const char* __private_jbroot_revert_alloc(const char* path)
+static const char* __private_rootfs_alloc(const char* path)
 {
-    LOG(" **jbroot_revert_alloc %s\n", path);
+    LOG(" **rootfs_alloc %s\n", path);
     
     if(!path || !*path) {
         return NULL;
@@ -358,11 +405,11 @@ const char* jbroot(const char* path)
 }
 
 /* free after use */
-const char* jbroot_revert_alloc(const char* path)
+const char* rootfs_alloc(const char* path)
 {
     if(!path) return path;
     
-    const char* newpath = __private_jbroot_revert_alloc(path);
+    const char* newpath = __private_rootfs_alloc(path);
     
     if(!newpath) newpath = strdup(path);
     
@@ -370,9 +417,9 @@ const char* jbroot_revert_alloc(const char* path)
 }
 
 //use cache
-const char* jbroot_revert(const char* path)
+const char* rootfs(const char* path)
 {
-    const char* newpath = jbroot_revert_alloc(path);
+    const char* newpath = rootfs_alloc(path);
     
     //cache here
     

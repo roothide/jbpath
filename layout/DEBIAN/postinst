@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# find / -type l | /var/jb/usr/sbin/updatelink
+#find / -xdev -type l | /usr/libexec/updatelink
 
 exit 0
 

@@ -9,9 +9,9 @@ NSString* __attribute__((overloadable)) jbroot(NSString* path)
     return newpath;
 }
 
-NSString* __attribute__((overloadable)) jbroot_revert(NSString* path)
+NSString* __attribute__((overloadable)) rootfs(NSString* path)
 {
-    const char* _p = jbroot_revert_alloc(path.UTF8String);
+    const char* _p = rootfs_alloc(path.UTF8String);
     if(!_p) return path;
     NSString* newpath = [NSString stringWithUTF8String:_p];
     free((void*)_p);
